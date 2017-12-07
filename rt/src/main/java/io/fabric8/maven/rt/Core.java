@@ -18,12 +18,10 @@ package io.fabric8.maven.rt;
 
 import io.fabric8.kubernetes.api.KubernetesHelper;
 import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.PodList;
 import io.fabric8.kubernetes.client.ConfigBuilder;
-import io.fabric8.kubernetes.client.KubernetesClientException;
-import io.fabric8.kubernetes.client.Watch;
-import io.fabric8.kubernetes.client.Watcher;
-import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable;
+import io.fabric8.kubernetes.client.dsl.NamespaceVisitFromServerGetWatchDeleteRecreateWaitApplicable;
 import io.fabric8.openshift.api.model.DeploymentConfig;
 import io.fabric8.openshift.api.model.DeploymentConfigList;
 import io.fabric8.openshift.api.model.Route;
@@ -51,6 +49,7 @@ import java.io.*;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class Core {
 
@@ -270,6 +269,20 @@ public class Core {
      * @throws Exception
      */
     public void waitTillApplicationPodStarts() throws Exception {
+        System.out.println("Waiting to application pod .... ");
+        while(true) {
+            PodList podList = openShiftClient.pods().withLabel("app", TESTSUITE_REPOSITORY_ARTIFACT_ID).list();
+            for(Pod pod: podList.getItems()) {
+                if(pod.getMetadata().getLabels().containsKey("app")
+                        && pod.getMetadata().getLabels().get("app").equals(TESTSUITE_REPOSITORY_ARTIFACT_ID)
+                        && KubernetesHelper.isPodReady(pod)) {
+                    return;
+                }
+            }
+            TimeUnit.SECONDS.sleep(5);
+        }
+
+        /*openShiftClient.resource("").waitUntilReady(1, TimeUnit.MINUTES);
         FilterWatchListDeletable<Pod, PodList, Boolean, Watch, Watcher<Pod>> pods = openShiftClient.pods()
                 .inNamespace(testSuiteNamespace);
         Watch podWatcher = pods.watch(new Watcher<Pod>() {
@@ -289,10 +302,10 @@ public class Core {
             @Override
             public void onClose(KubernetesClientException e) {
             }
-        });
+        });*/
 
         // Wait till pod starts up
-        while (terminateLatch.getCount() > 0) {
+       /* while (terminateLatch.getCount() > 0) {
             try {
                 terminateLatch.await();
             } catch (InterruptedException aException) {
@@ -301,6 +314,23 @@ public class Core {
             if (applicationPod != null) {
                 break;
             }
+        }*/
+    }
+
+    public void waitTillApplicationPodStarts(String key, String value) throws Exception {
+        System.out.println("Waiting to application pod .... ");
+
+        while (true) {
+            PodList podList = openShiftClient.pods().withLabel("app", TESTSUITE_REPOSITORY_ARTIFACT_ID).list();
+            for(Pod pod: podList.getItems()) {
+                if(pod.getMetadata().getAnnotations().containsKey(key)
+                        && pod.getMetadata().getAnnotations().get(key).equalsIgnoreCase(value)
+                        && KubernetesHelper.isPodReady(pod)) {
+                    return;
+                }
+            }
+
+            TimeUnit.SECONDS.sleep(5);
         }
     }
 
