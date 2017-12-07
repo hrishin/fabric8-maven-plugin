@@ -53,11 +53,16 @@ public class VertxHttpBoosterIT extends Core {
     public void redeploy_springboot_app() throws Exception {
         Repository testRepository = setupSampleTestRepository(SPRING_BOOT_HTTP_BOOSTER_GIT, RELATIVE_POM_PATH);
 
+        deploy(testRepository, EMBEDDED_MAVEN_FABRIC8_BUILD_GOAL, EMBEDDED_MAVEN_FABRIC8_BUILD_PROFILE);
+        waitTillApplicationPodStarts(ANNOTATION_KEY,ANNOTATION_VALUE);
+
+        assertDeployment(TESTSUITE_REPOSITORY_ARTIFACT_ID);
+
         // change the source code
         updateSourceCode(testRepository, RELATIVE_POM_PATH);
         addRedeploymentAnnotations(testRepository, RELATIVE_POM_PATH, ANNOTATION_KEY, ANNOTATION_VALUE, FMP_CONFIGURATION_FILE);
         deploy(testRepository, EMBEDDED_MAVEN_FABRIC8_BUILD_GOAL, EMBEDDED_MAVEN_FABRIC8_BUILD_PROFILE);
-        waitTillApplicationPodStarts(ANNOTATION_KEY, ANNOTATION_VALUE);
+        waitTillApplicationPodStarts(ANNOTATION_KEY,ANNOTATION_VALUE);
 
         assertDeployment(TESTSUITE_REPOSITORY_ARTIFACT_ID);
         assert checkDeploymentsForAnnotation(ANNOTATION_KEY);
